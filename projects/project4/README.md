@@ -19,9 +19,9 @@ In this project, you
 - See **Section 5.5.3** (Computational Form) in Eijkhout's "Intro to HPC".  
 - **Equation (5.16)** illustrates the Jacobi iterative scheme explicitly:
 
-\[
+$$
 x_i^{(t+1)} = a_{ii}^{-1}\left(\sum_{j\ne i}a_{ij}x_j^{(t)} + b_i\right)
-\]
+$$
 
 This scheme is stationary, as every iteration follows the same update process without dependence on the iteration number (**Section 5.5.1**).
 
@@ -171,11 +171,11 @@ Starting from your serial Jacobi solver, we will now proceed with implementing p
 
 The Jacobi solver iteratively solves a system of linear equations:
 
-\[
+$$
 A x = b
-\]
+$$
 
-This method splits the coefficient matrix \( A \) into three parts:
+This method splits the coefficient matrix $ A $ into three parts:
 
 - Lower triangular part \( L \)
 - Diagonal part \( D \)
@@ -183,9 +183,9 @@ This method splits the coefficient matrix \( A \) into three parts:
 
 The original equation is rearranged to isolate the unknown vector \( x \):
 
-\[
+$$
 D x = b - (L + U) x \quad\rightarrow\quad x_{\text{new}} = D^{-1}(b - (L + U)x_{\text{old}})
-\]
+$$
 
 The iterative Jacobi algorithm updates \( x \) repeatedly until convergence is reached, typically determined by a tolerance on the change in successive \( x \).
 

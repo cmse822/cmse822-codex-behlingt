@@ -1,8 +1,10 @@
 #include <iostream>
 #include <vector>
 #include <chrono>
+#include <omp.h>
 
-constexpr int N = 100000;
+constexpr int N = 10000;
+// constexpr int N = 1000000;
 constexpr double TOL = 1e-4;
 
 int main() {
@@ -17,9 +19,24 @@ int main() {
 
     // Add two vectors using a simple loop and measure time.
     auto start = std::chrono::high_resolution_clock::now();
+
+    // Start parallelism
+    // A & B are shared]
+    // #pragma omp parallel for shared(a, b, c)
+    // for (int i = 0; i < N; ++i) {
+    //     c[i] = a[i] + b[i];
+    // }
+    
+    //need to map data from host to device
+    //  we can specify tofrom, or only send to, pull from.
+    #pragma omp target map(tofrom: a[0:N], b[0:N], c[0:N])
+    {
+    #pragma omp loop
     for (int i = 0; i < N; ++i) {
         c[i] = a[i] + b[i];
     }
+    }
+
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
 
