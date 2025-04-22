@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
     std::cout << "Starting loop..." << std::endl;
 
     #pragma omp target data map(tofrom: xnew_ptr[0:Ndim], xold_ptr[0:Ndim]) \
-                            map(from: A_ptr[0:Ndim*Ndim], b_ptr[0:Ndim])
+                            map(to: A_ptr[0:Ndim*Ndim], b_ptr[0:Ndim])
     {
     while ((conv > TOLERANCE) && (iters < MAX_ITERS)) {
         ++iters;
@@ -60,17 +60,17 @@ int main(int argc, char **argv) {
         // Compute new iteration
         // for each element in x;
         // #pragma omp target map(tofrom: xnew_ptr[0:Ndim], xold_ptr[0:Ndim]) \
-        //                    map(from: A_ptr[0:Ndim*Ndim], b_ptr[0:Ndim])
-        // #pragma omp target
+        //                    map(to: A_ptr[0:Ndim*Ndim], b_ptr[0:Ndim])
+        // #pragma omp loop
         #pragma omp target loop
         for (int i = 0; i < Ndim; ++i) {
             xnew_ptr[i] = 0.0;
 
             //we want to add together all the i != j elements of A*xold[j].
             for (int j = 0; j < Ndim; ++j) {
-                if (i != j)
-                    xnew_ptr[i] += A_ptr[index(i,j,Ndim)] * xold_ptr[j]; 
-                // xnew_ptr[i] += A_ptr[index(i,j,Ndim)] * xold_ptr[j] * static_cast<double>(i != j);
+                // if (i != j)
+                //     xnew_ptr[i] += A_ptr[index(i,j,Ndim)] * xold_ptr[j]; 
+                xnew_ptr[i] += A_ptr[index(i,j,Ndim)] * xold_ptr[j] * static_cast<double>(i != j);
             }
             //adding bi, and dividing by aii
             xnew_ptr[i] = (b_ptr[i] - xnew_ptr[i]) / (A_ptr[index(i,i,Ndim)]);
@@ -80,8 +80,8 @@ int main(int argc, char **argv) {
         conv = 0.0;
         // #pragma omp target //map(to: xnew_ptr[0:Ndim], xold_ptr[0:Ndim]) \
         //                    map(tofrom: conv)
-        #pragma omp target map(tofrom: conv)
-        // #pragma omp loop reduction(+:conv)
+        #pragma omp target loop map(tofrom: conv) reduction(+:conv)
+        // #pragma omp target loop reduction(+:conv)
         for (int i = 0; i < Ndim; ++i) {
             double tmp = xnew_ptr[i] - xold_ptr[i];
             conv += tmp * tmp;
@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
         // Swap vectors for next iteration
         // std::swap(xold, xnew);
         #pragma omp target loop
-        for(int i =0; i < Ndim; i++) {
+        for(int i = 0; i < Ndim; i++) {
             xold_ptr[i] = xnew_ptr[i];
         }
     }
@@ -119,6 +119,10 @@ int main(int argc, char **argv) {
     }
     err = static_cast<double>(std::sqrt(err));
 
+    double totalFlops = 2.0 * static_cast<double>(Ndim)*static_cast<double>(Ndim)*static_cast<double>(iters);
+    double flopsPerSecond = (elapsed_time > 0) ? totalFlops / elapsed_time : 0.0;
+    std::cout << "FLOP rate: " << flopsPerSecond << " FLOPS/s" << std::endl;
+    
     std::cout << "Solution verification: Error = " << err
             << ", Checksum = " << chksum << std::endl;
 
