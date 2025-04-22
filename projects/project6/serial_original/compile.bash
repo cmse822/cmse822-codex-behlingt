@@ -1,0 +1,1 @@
+g++ -o project1 src/main.cpp src/MathFunctions.cpp
