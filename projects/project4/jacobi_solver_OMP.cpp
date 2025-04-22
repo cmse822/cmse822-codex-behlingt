@@ -6,7 +6,7 @@
 #include "mm_utils.hpp"
 
 // Constants
-constexpr double TOLERANCE = 0.005; //bumped this from 0.005; I kept getting errors of ~0.001
+constexpr double TOLERANCE = 0.001; //bumped this from 0.005; I kept getting errors of ~0.001
 constexpr int DEF_SIZE = 1000;
 constexpr int MAX_ITERS = 100000;
 constexpr double LARGE = 1000000.0;
@@ -51,33 +51,39 @@ int main(int argc, char **argv) {
 
     std::cout << "Starting loop..." << std::endl;
 
+    #pragma omp target data map(tofrom: xnew_ptr[0:Ndim], xold_ptr[0:Ndim]) \
+                            map(from: A_ptr[0:Ndim*Ndim], b_ptr[0:Ndim])
+    {
     while ((conv > TOLERANCE) && (iters < MAX_ITERS)) {
         ++iters;
 
         // Compute new iteration
         // for each element in x;
-        #pragma omp target data map(tofrom: xnew_ptr[0:Ndim], xold_ptr[0:Ndim]) \
-                                map(from: A_ptr[0:Ndim*Ndim], b_ptr[0:Ndim])
-        #pragma omp loop
+        // #pragma omp target map(tofrom: xnew_ptr[0:Ndim], xold_ptr[0:Ndim]) \
+        //                    map(from: A_ptr[0:Ndim*Ndim], b_ptr[0:Ndim])
+        // #pragma omp target
+        #pragma omp target loop
         for (int i = 0; i < Ndim; ++i) {
-            xnew[i] = 0.0;
+            xnew_ptr[i] = 0.0;
 
             //we want to add together all the i != j elements of A*xold[j].
             for (int j = 0; j < Ndim; ++j) {
                 if (i != j)
-                    xnew[i] += A[index(i,j,Ndim)] * xold[j]; 
+                    xnew_ptr[i] += A_ptr[index(i,j,Ndim)] * xold_ptr[j]; 
+                // xnew_ptr[i] += A_ptr[index(i,j,Ndim)] * xold_ptr[j] * static_cast<double>(i != j);
             }
             //adding bi, and dividing by aii
-            xnew[i] = (b[i] - xnew[i]) / (A[index(i,i,Ndim)]);
+            xnew_ptr[i] = (b_ptr[i] - xnew_ptr[i]) / (A_ptr[index(i,i,Ndim)]);
         }
 
         // Compute convergence criterion (Euclidean norm of difference)
         conv = 0.0;
-        #pragma omp target map(to: xnew_ptr[0:Ndim], xold_ptr[0:Ndim]) \
-                           map(tofrom: conv)
-        #pragma omp loop reduction(+:conv)
+        // #pragma omp target //map(to: xnew_ptr[0:Ndim], xold_ptr[0:Ndim]) \
+        //                    map(tofrom: conv)
+        #pragma omp target map(tofrom: conv)
+        // #pragma omp loop reduction(+:conv)
         for (int i = 0; i < Ndim; ++i) {
-            double tmp = xnew[i] - xold[i];
+            double tmp = xnew_ptr[i] - xold_ptr[i];
             conv += tmp * tmp;
         }
         conv = std::sqrt(conv);
@@ -87,7 +93,12 @@ int main(int argc, char **argv) {
         }
 
         // Swap vectors for next iteration
-        std::swap(xold, xnew);
+        // std::swap(xold, xnew);
+        #pragma omp target loop
+        for(int i =0; i < Ndim; i++) {
+            xold_ptr[i] = xnew_ptr[i];
+        }
+    }
     }
 
     double elapsed_time = omp_get_wtime() - start_time;
