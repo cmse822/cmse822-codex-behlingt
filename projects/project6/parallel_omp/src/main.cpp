@@ -13,6 +13,8 @@
 
 #include <chrono>
 
+#include <omp.h>
+
 /**
  * @brief writes the vector of arrays to a file.
  * Each line represents one value;
@@ -79,10 +81,10 @@ int main () {
         double cpos {PROBLEM::ORIGINX + ix * PROBLEM::DELTAX};
         
         //initialize temporary variables
-        double rho {0};
-        double P {0};
-        double T {0};
-        double u {0};
+        double rho {0}; rho = 0;
+        double P {0}; P = 0;
+        double T {0}; T = 0;
+        double u {0}; u = 0;
 
         //If we are above the contact;
         if(cpos > PROBLEM::CONTACTX){
@@ -165,7 +167,7 @@ int main () {
         for(int ix{0}; ix < PROBLEM::Nx; ix++){
             //Obtaining the derivative of F
 
-            std::array<double, 3> derivF;
+            // std::array<double, 3> derivF;
             //Determine BC behavior;
             if(ix == 0) {derivF = {0,0,0};}
             else {derivF = backwardDifference(fieldF[ix], fieldF[ix-1], PROBLEM::DELTAX);}
