@@ -41,7 +41,20 @@ void writeArrFile(std::vector<std::array<double, 3>> vec_arr, std::string filena
 
 
 
-int main () {
+int main (int argc, char* argv[]) {
+
+    //starts MPI
+    MPI_Init(&argc, &argv);
+    MPI_Comm comm = MPI_COMM_WORLD; //communication object; how we TALK
+
+    //declaring variables
+    int comm_rank{};
+    int comm_size{};
+
+    //this guy gives us rank (what num) and overall n of processors
+    //  wants mem address of ints.
+    MPI_Comm_rank(comm, &comm_rank);
+    MPI_Comm_size(comm, &comm_size);
 
     //Instantiating arrays for U, F, J
 
@@ -114,14 +127,17 @@ int main () {
         fieldJ[ix] = obtainJ(fieldU[ix], fieldU[px], fieldU[nx], stress[ix]);
     }
 
-    writeArrFile(fieldU, "output/initial.txt");
+    if(comm_rank == 0) {
+
+        std::cout << "=========== Starting ===========" << '\n';
+        writeArrFile(fieldU, "output/initial.txt");
+    }
+
 
     //Now, we want to while loop up to our final time;
     double ctime {0};
 
     auto start = std::chrono::high_resolution_clock::now();
-
-    std::cout << "=========== Starting ===========" << '\n';
 
     while(ctime < PROBLEM::TIMETARGET){
 
@@ -245,12 +261,17 @@ int main () {
 
     //printing the final timestep.
     //std::cout << "time: " << ctime << "/" << PROBLEM::TIMETARGET << " - " << 100 * ctime / PROBLEM::TIMETARGET << "%" << " - it: " << stepcount << '\n'; 
-    std::cout << "time elapsed: " << elapsed.count() << " seconds" << std::endl;
-    std::cout << "it/sec: " << stepcount / elapsed.count() << std::endl;
-    //writing out the final result to a text file.
-    // writeArrFile(fieldU, "output/final.txt");
-    std::cout << "=========== Done! ===========" << '\n';
+    
+    if(comm_rank == 0) {
+        std::cout << "time elapsed: " << elapsed.count() << " seconds" << std::endl;
+        std::cout << "it/sec: " << stepcount / elapsed.count() << std::endl;
+        //writing out the final result to a text file.
+        // writeArrFile(fieldU, "output/final.txt");
+        std::cout << "=========== Done! ===========" << '\n';
+    }
 
+
+    MPI_Finalize();
     return 0;
 }
 
