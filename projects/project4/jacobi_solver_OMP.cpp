@@ -28,6 +28,18 @@ int main(int argc, char **argv) {
     std::vector<double> xnew(Ndim, 0.0);
     std::vector<double> xold(Ndim, 0.0);
 
+    // Generate diagonally dominant matrix A
+    initDiagDomNearIdentityMatrix(Ndim, A.data());
+
+    //need to transpose this A. :)
+    std::vector<double> Atemp(Ndim * Ndim);
+    for(int i = 0; i < Ndim; i++){
+        for(int j = 0; j < Ndim; j++) {
+            Atemp[index(i,j, Ndim)] = A[index(j,i, Ndim)];
+        }
+    }
+    std::swap(A, Atemp);
+
     // Pointers to the data;
     //   needed for the OMP target offload; doesn't support vector class.
     //   OMP <-- strange??? :/
@@ -36,8 +48,6 @@ int main(int argc, char **argv) {
     double* xnew_ptr {xnew.data()};
     double* xold_ptr {xold.data()};
 
-    // Generate diagonally dominant matrix A
-    initDiagDomNearIdentityMatrix(Ndim, A.data());
 
     // Initialize b with random values (between 0.0 and 0.5)
     for (int i = 0; i < Ndim; ++i) {
@@ -70,7 +80,7 @@ int main(int argc, char **argv) {
             for (int j = 0; j < Ndim; ++j) {
                 // if (i != j)
                 //     xnew_ptr[i] += A_ptr[index(i,j,Ndim)] * xold_ptr[j]; 
-                xnew_ptr[i] += A_ptr[index(i,j,Ndim)] * xold_ptr[j] * static_cast<double>(i != j);
+                xnew_ptr[i] += A_ptr[index(j,i,Ndim)] * xold_ptr[j] * static_cast<double>(i != j);
             }
             //adding bi, and dividing by aii
             xnew_ptr[i] = (b_ptr[i] - xnew_ptr[i]) / (A_ptr[index(i,i,Ndim)]);
@@ -111,7 +121,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i < Ndim; ++i) {
         xold[i] = static_cast<double>(0.0);
         for (int j = 0; j < Ndim; ++j)
-            xold[i] += A[i * Ndim + j] * xnew[j];
+            xold[i] += A[j * Ndim + i] * xnew[j];
 
         double diff = xold[i] - b[i];
         chksum += xnew[i];
