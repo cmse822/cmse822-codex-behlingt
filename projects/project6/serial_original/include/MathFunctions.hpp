@@ -32,8 +32,8 @@ std::array<double, 3> obtainJ(std::array<double, 3> &U,
 std::array<double, 2> obtainStress(std::array<double, 3> &Uprev, 
                                    std::array<double, 3> &Unext);
 
-const double obtainT(double e);
-const double obtainE(double T);
+double obtainT(double e);
+double obtainE(double T);
 
 /**
  * @brief Forward Differencing Function;

@@ -165,7 +165,6 @@ int main () {
         for(int ix{0}; ix < PROBLEM::Nx; ix++){
             //Obtaining the derivative of F
 
-            std::array<double, 3> derivF;
             //Determine BC behavior;
             if(ix == 0) {derivF = {0,0,0};}
             else {derivF = backwardDifference(fieldF[ix], fieldF[ix-1], PROBLEM::DELTAX);}

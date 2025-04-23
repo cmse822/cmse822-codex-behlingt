@@ -121,6 +121,19 @@ int main () {
 
     auto start = std::chrono::high_resolution_clock::now();
 
+    //As part of this, I need to swap to pointers (unfortunately).
+
+    std::array<double, 3>* fieldU_data {fieldU.data()}; 
+    std::array<double, 3>* fieldUbar_data {fieldUbar.data()};
+
+    std::array<double, 3>* fieldF_data {fieldF.data()};
+    std::array<double, 3>* fieldFbar_data {fieldFbar.data()};
+
+    std::array<double, 3>* fieldJ_data {fieldJ.data()};
+    std::array<double, 3>* fieldJbar_data {fieldJbar.data()};
+
+    std::array<double, 2>* stress_data {stress.data()};
+
     std::cout << "=========== Starting ===========" << '\n';
 
     while(ctime < PROBLEM::TIMETARGET){
@@ -128,7 +141,7 @@ int main () {
         //incrementing time upwards.
         // ctime += PROBLEM::TIMESTEP;
         //using the non-equal timesteps instead;
-        double timestep = obtainTimestep(fieldU);
+        double timestep = obtainTimestep(fieldU_data);
 
         //if this would put us past the final time, clamp;
         if((ctime + timestep) >= PROBLEM::TIMETARGET){
@@ -141,9 +154,9 @@ int main () {
 
         //update stress vector to this timestep;
         for(int ix {0}; ix < PROBLEM::Nx; ix++){
-            if(ix == 0)                  {stress[ix] = obtainStress(fieldU[ix], fieldU[ix+1]);}
-            else if(ix == PROBLEM::Nx-1) {stress[ix] = obtainStress(fieldU[ix-1], fieldU[ix]);}
-            else                         {stress[ix] = obtainStress(fieldU[ix-1], fieldU[ix+1]);}
+            if(ix == 0)                  {stress_data[ix] = obtainStress(fieldU_data[ix], fieldU_data[ix+1]);}
+            else if(ix == PROBLEM::Nx-1) {stress_data[ix] = obtainStress(fieldU_data[ix-1], fieldU_data[ix]);}
+            else                         {stress_data[ix] = obtainStress(fieldU_data[ix-1], fieldU_data[ix+1]);}
         }
 
         //updating F and J at this timestep;
@@ -154,8 +167,8 @@ int main () {
             if(ix == 0) {px = ix;}
             if(ix == PROBLEM::Nx - 1) {nx = ix;}
 
-            fieldF[ix] = obtainF(fieldU[ix], stress[ix]);
-            fieldJ[ix] = obtainJ(fieldU[ix], fieldU[px], fieldU[nx], stress[ix]);
+            fieldF_data[ix] = obtainF(fieldU_data[ix], stress_data[ix]);
+            fieldJ_data[ix] = obtainJ(fieldU_data[ix], fieldU_data[px], fieldU_data[nx], stress_data[ix]);
         }
 
         std::array<double, 3> derivF {0,0,0}; 
@@ -170,10 +183,10 @@ int main () {
             // std::array<double, 3> derivF;
             //Determine BC behavior;
             if(ix == 0) {derivF = {0,0,0};}
-            else {derivF = backwardDifference(fieldF[ix], fieldF[ix-1], PROBLEM::DELTAX);}
+            else {derivF = backwardDifference(fieldF_data[ix], fieldF_data[ix-1], PROBLEM::DELTAX);}
 
             //Performing predictor step;
-            fieldUbar[ix] = predictorStep(fieldU[ix], derivF, fieldJ[ix], timestep);
+            fieldUbar_data[ix] = predictorStep(fieldU_data[ix], derivF, fieldJ_data[ix], timestep);
 
             //determine BC behavior for U;
             if(ix == 0) {ip = ix; in = ix+1;}
@@ -181,18 +194,18 @@ int main () {
             else {ip = ix-1; in = ix+1;}
 
             //adding artificial viscosity term;
-            std::array<double, 3> visc = artificialViscosity(fieldU[ix], fieldU[ip], fieldU[in]);
-            fieldUbar[ix][0] += visc[0];
-            fieldUbar[ix][1] += visc[1];
-            fieldUbar[ix][2] += visc[2];
+            std::array<double, 3> visc = artificialViscosity(fieldU_data[ix], fieldU_data[ip], fieldU_data[in]);
+            fieldUbar_data[ix][0] += visc[0];
+            fieldUbar_data[ix][1] += visc[1];
+            fieldUbar_data[ix][2] += visc[2];
 
         }
 
         //get predictor stress;
         for(int ix {0}; ix < PROBLEM::Nx; ix++){
-            if(ix == 0)                  {stress[ix] = obtainStress(fieldUbar[ix], fieldUbar[ix+1]);}
-            else if(ix == PROBLEM::Nx-1) {stress[ix] = obtainStress(fieldUbar[ix-1], fieldUbar[ix]);}
-            else                         {stress[ix] = obtainStress(fieldUbar[ix-1], fieldUbar[ix+1]);}
+            if(ix == 0)                  {stress_data[ix] = obtainStress(fieldUbar_data[ix], fieldUbar_data[ix+1]);}
+            else if(ix == PROBLEM::Nx-1) {stress_data[ix] = obtainStress(fieldUbar_data[ix-1], fieldUbar_data[ix]);}
+            else                         {stress_data[ix] = obtainStress(fieldUbar_data[ix-1], fieldUbar_data[ix+1]);}
         }
 
         //get predictor F and J;
@@ -203,8 +216,8 @@ int main () {
             if(ix == 0) {px = ix;}
             if(ix == PROBLEM::Nx - 1) {nx = ix;}
 
-            fieldFbar[ix] = obtainF(fieldUbar[ix], stress[ix]);
-            fieldJbar[ix] = obtainJ(fieldUbar[ix], fieldUbar[px], fieldUbar[nx], stress[ix]);
+            fieldFbar_data[ix] = obtainF(fieldUbar_data[ix], stress_data[ix]);
+            fieldJbar_data[ix] = obtainJ(fieldUbar_data[ix], fieldUbar_data[px], fieldUbar_data[nx], stress_data[ix]);
         }
 
         std::array<double, 3> derivFbar {0,0,0};
@@ -212,9 +225,9 @@ int main () {
         for(int ix{0}; ix < PROBLEM::Nx; ix++){
 
             if(ix == PROBLEM::Nx-1) {derivFbar = {0,0,0};}
-            else {derivFbar = forwardDifference(fieldFbar[ix], fieldFbar[ix+1], PROBLEM::DELTAX);}
+            else {derivFbar = forwardDifference(fieldFbar_data[ix], fieldFbar_data[ix+1], PROBLEM::DELTAX);}
 
-            fieldU[ix] = correctorStep(fieldU[ix], fieldUbar[ix], derivFbar, fieldJbar[ix], timestep);
+            fieldU_data[ix] = correctorStep(fieldU_data[ix], fieldUbar_data[ix], derivFbar, fieldJbar_data[ix], timestep);
 
             //determine BC behavior for U;
             if(ix == 0) {ip = ix; in = ix+1;}
@@ -222,10 +235,10 @@ int main () {
             else {ip = ix-1; in = ix+1;}
 
             //adding artificial viscosity term;
-            std::array<double, 3> visc = artificialViscosity(fieldUbar[ix], fieldUbar[ip], fieldUbar[in]);
-            fieldU[ix][0] += visc[0];
-            fieldU[ix][1] += visc[1];
-            fieldU[ix][2] += visc[2];
+            std::array<double, 3> visc = artificialViscosity(fieldUbar_data[ix], fieldUbar_data[ip], fieldUbar_data[in]);
+            fieldU_data[ix][0] += visc[0];
+            fieldU_data[ix][1] += visc[1];
+            fieldU_data[ix][2] += visc[2];
 
         }
 

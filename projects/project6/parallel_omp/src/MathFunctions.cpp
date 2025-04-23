@@ -193,7 +193,7 @@ std::array<double, 3> artificialViscosity(std::array<double, 3> &U,
 
 double geta(double T) {return pow( CONST::GAMMA * CONST::R * T, 0.5);}
 
-double obtainTimestep(std::vector<std::array<double, 3>> &fieldU){
+double obtainTimestep(std::array<double, 3>* fieldU){
     //we have the entire field.
     //first, for each U, we want to calculate that timestep;
     // we then compare to the previous; if new is lower, we insert the new one

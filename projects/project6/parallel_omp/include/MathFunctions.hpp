@@ -60,4 +60,4 @@ std::array<double, 3> correctorStep(std::array<double, 3> U, std::array<double, 
 
 std::array<double, 3> artificialViscosity(std::array<double, 3> &U, std::array<double, 3> &Uprev, std::array<double, 3> &Unext);
 
-double obtainTimestep(std::vector<std::array<double, 3>> &fieldU);
+double obtainTimestep(std::array<double, 3>* fieldU);

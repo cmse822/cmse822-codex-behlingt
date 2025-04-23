@@ -83,11 +83,11 @@ std::array<double, 2> obtainStress(std::array<double, 3> &Uprev,
     return(output);
 }
 
-const double obtainT(double e) {
+double obtainT(double e) {
     return(e / CONST::Cv);
 }
 
-const double obtainE(double T) {
+double obtainE(double T) {
     return(T * CONST::Cv);
 }
 
