@@ -19,7 +19,7 @@ namespace PROBLEM {
     const double CONTACTX = 0;
 
 
-    const double NTIMESTEPS = 1000;
+    const double NTIMESTEPS = 10000;
     const int OUTINTERVAL = 99999;
 
 

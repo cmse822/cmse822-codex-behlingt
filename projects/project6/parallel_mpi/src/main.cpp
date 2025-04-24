@@ -376,21 +376,57 @@ int main (int argc, char* argv[]) {
         // }
 
         stepcount++;
-
     }
 
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
 
+    //We now need to combine the data onto rank 0.
+    std::vector<std::array<double, 3>> fullFieldU; fullFieldU.resize(PROBLEM::Nx, {0,0,0});
+    std::vector<double> fullFieldU_e1, fieldU_e1; fullFieldU_e1.resize(PROBLEM::Nx, 0.0); fieldU_e1.resize(localXLength, 0.0); 
+    std::vector<double> fullFieldU_e2, fieldU_e2; fullFieldU_e2.resize(PROBLEM::Nx, 0.0); fieldU_e2.resize(localXLength, 0.0); 
+    std::vector<double> fullFieldU_e3, fieldU_e3; fullFieldU_e3.resize(PROBLEM::Nx, 0.0); fieldU_e3.resize(localXLength, 0.0); 
+
+    //need to rearrange this to be conducive to sending via gather...
+    //   from vector of arrays to three 1 dim vectors;
+    for(int i = 0; i < fieldU.size(); i++) {
+        fieldU_e1[i] = fieldU[i][0];
+        fieldU_e2[i] = fieldU[i][1];
+        fieldU_e3[i] = fieldU[i][2];
+    }
+
+    // for(int i = 0; i < fieldU.size(); i++) {
+    //     std::cout << fieldU[i][0] << ", ";
+    // }
+    // std::cout << std::endl;
+
+    MPI_Gather(fieldU_e1.data(), localXLength, MPI_DOUBLE,
+               fullFieldU_e1.data(), PROBLEM::Nx, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Gather(fieldU_e2.data(), localXLength, MPI_DOUBLE,
+               fullFieldU_e2.data(), PROBLEM::Nx, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Gather(fieldU_e3.data(), localXLength, MPI_DOUBLE,
+               fullFieldU_e3.data(), PROBLEM::Nx, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
+
     //printing the final timestep.
-    //std::cout << "time: " << ctime << "/" << PROBLEM::TIMETARGET << " - " << 100 * ctime / PROBLEM::TIMETARGET << "%" << " - it: " << stepcount << '\n'; 
-    
     if(comm_rank == 0) {
         std::cout << "time elapsed: " << elapsed.count() << " seconds" << std::endl;
         std::cout << "it/sec: " << stepcount / elapsed.count() << std::endl;
+
+        std::cout << "should only be on rank 0" << std::endl;
+        //collecting fullFieldU;
+        for(int i = 0; i < PROBLEM::Nx; i++) {
+            fullFieldU[i][0] = fieldU_e1[i];
+            fullFieldU[i][1] = fieldU_e2[i];
+            fullFieldU[i][2] = fieldU_e3[i];
+        }
+
+        
+        std::cout << "should be ready 2 rite!! " << std::endl;
+
         //writing out the final result to a text file.
-        // writeArrFile(fieldU, "output/final.txt");
+        writeArrFile(fullFieldU, "output/final.txt");
         std::cout << "=========== Done! ===========" << '\n';
     }
 

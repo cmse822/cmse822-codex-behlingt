@@ -24,7 +24,7 @@ std::array<double, 2> posStressBufferSend {0,0};
 std::array<double, 2> negStressBufferRecv {0,0};
 std::array<double, 2> posStressBufferRecv {0,0};
 
-std::array<MPI_Request, 2> requests;
+std::array<MPI_Request, 4> requests;
 
 /**
  * @brief exchanges Ghost Cells for Field objects.
