@@ -19,14 +19,14 @@ namespace PROBLEM {
     const double CONTACTX = 0;
 
 
-    const double NTIMESTEPS = 10000;
+    const double NTIMESTEPS = 50000;
     const int OUTINTERVAL = 99999;
 
 
     /**
      * @brief Viscosity parameter Cx.
      */
-    const double CX = 0.05;
+    const double CX = 0.3;
 
     const double TIMETARGET = 0.005;
 

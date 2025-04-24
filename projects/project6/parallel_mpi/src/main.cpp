@@ -402,11 +402,11 @@ int main (int argc, char* argv[]) {
     // std::cout << std::endl;
 
     MPI_Gather(fieldU_e1.data(), localXLength, MPI_DOUBLE,
-               fullFieldU_e1.data(), PROBLEM::Nx, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+               fullFieldU_e1.data(), localXLength, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Gather(fieldU_e2.data(), localXLength, MPI_DOUBLE,
-               fullFieldU_e2.data(), PROBLEM::Nx, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+               fullFieldU_e2.data(),  localXLength, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Gather(fieldU_e3.data(), localXLength, MPI_DOUBLE,
-               fullFieldU_e3.data(), PROBLEM::Nx, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+               fullFieldU_e3.data(), localXLength, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Barrier(MPI_COMM_WORLD);
 
     //printing the final timestep.
@@ -414,16 +414,12 @@ int main (int argc, char* argv[]) {
         std::cout << "time elapsed: " << elapsed.count() << " seconds" << std::endl;
         std::cout << "it/sec: " << stepcount / elapsed.count() << std::endl;
 
-        std::cout << "should only be on rank 0" << std::endl;
         //collecting fullFieldU;
         for(int i = 0; i < PROBLEM::Nx; i++) {
             fullFieldU[i][0] = fieldU_e1[i];
             fullFieldU[i][1] = fieldU_e2[i];
             fullFieldU[i][2] = fieldU_e3[i];
         }
-
-        
-        std::cout << "should be ready 2 rite!! " << std::endl;
 
         //writing out the final result to a text file.
         writeArrFile(fullFieldU, "output/final.txt");
