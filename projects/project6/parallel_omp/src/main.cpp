@@ -136,30 +136,45 @@ int main () {
 
     std::cout << "=========== Starting ===========" << '\n';
 
+    int Nx = PROBLEM::Nx;
+
+
+    #pragma omp target data map(tofrom: fieldU_data[0:Nx], fieldUbar_data[0:Nx], \
+        fieldF_data[0:Nx], fieldFbar_data[0:Nx], \
+        fieldJ_data[0:Nx], fieldJbar_data[0:Nx], \
+        stress_data[0:Nx])
+    {
+
     while(ctime < PROBLEM::TIMETARGET){
 
         //incrementing time upwards.
-        // ctime += PROBLEM::TIMESTEP;
+        double timestep = PROBLEM::TIMESTEP;
         //using the non-equal timesteps instead;
-        double timestep = obtainTimestep(fieldU_data);
+        // double timestep = obtainTimestep(fieldU_data);
+        ctime += timestep;
 
         //if this would put us past the final time, clamp;
-        if((ctime + timestep) >= PROBLEM::TIMETARGET){
+        if((ctime) >= PROBLEM::TIMETARGET){
             timestep = PROBLEM::TIMETARGET - ctime;
             ctime = PROBLEM::TIMETARGET;
         }
-        //otherwise, increase ctime.
-        else {ctime += timestep;}
-        
 
         //update stress vector to this timestep;
-        for(int ix {0}; ix < PROBLEM::Nx; ix++){
-            if(ix == 0)                  {stress_data[ix] = obtainStress(fieldU_data[ix], fieldU_data[ix+1]);}
-            else if(ix == PROBLEM::Nx-1) {stress_data[ix] = obtainStress(fieldU_data[ix-1], fieldU_data[ix]);}
-            else                         {stress_data[ix] = obtainStress(fieldU_data[ix-1], fieldU_data[ix+1]);}
+        // handle the two edges on their own, outside the loop;
+        stress_data[0]             = obtainStress(fieldU_data[0]            , fieldU_data[1]);
+        stress_data[PROBLEM::Nx-1] = obtainStress(fieldU_data[PROBLEM::Nx-2], fieldU_data[PROBLEM::Nx-1]);
+
+        // #pragma omp parallel for
+        // #pragma omp target teams distribute parallel for
+        #pragma omp target loop
+        for(int ix {1}; ix < PROBLEM::Nx-1; ix++){
+            stress_data[ix] = obtainStress(fieldU_data[ix-1], fieldU_data[ix+1]);
         }
 
         //updating F and J at this timestep;
+        // #pragma omp parallel for
+        // #pragma omp target teams distribute parallel for
+        #pragma omp target loop
         for(int ix {0}; ix < PROBLEM::Nx; ix++){
 
             int px {ix-1};
@@ -171,12 +186,16 @@ int main () {
             fieldJ_data[ix] = obtainJ(fieldU_data[ix], fieldU_data[px], fieldU_data[nx], stress_data[ix]);
         }
 
+
         std::array<double, 3> derivF {0,0,0}; 
 
         int in {0}; //index of the next U
         int ip {0}; //index of the previous U
 
         //Performing the Predictor step;
+        // #pragma omp parallel for
+        // #pragma omp target teams distribute parallel for
+        #pragma omp target loop
         for(int ix{0}; ix < PROBLEM::Nx; ix++){
             //Obtaining the derivative of F
 
@@ -202,6 +221,9 @@ int main () {
         }
 
         //get predictor stress;
+        // #pragma omp parallel for
+        // #pragma omp target teams distribute parallel for
+        #pragma omp target loop
         for(int ix {0}; ix < PROBLEM::Nx; ix++){
             if(ix == 0)                  {stress_data[ix] = obtainStress(fieldUbar_data[ix], fieldUbar_data[ix+1]);}
             else if(ix == PROBLEM::Nx-1) {stress_data[ix] = obtainStress(fieldUbar_data[ix-1], fieldUbar_data[ix]);}
@@ -209,6 +231,9 @@ int main () {
         }
 
         //get predictor F and J;
+        // #pragma omp parallel for
+        // #pragma omp target teams distribute parallel for
+        #pragma omp target loop
         for(int ix{0}; ix < PROBLEM::Nx; ix++){
 
             int px {ix-1};
@@ -222,6 +247,9 @@ int main () {
 
         std::array<double, 3> derivFbar {0,0,0};
         //Now, we do the corrector step;
+        // #pragma omp parallel for
+        // #pragma omp target teams distribute parallel for
+        #pragma omp target loop
         for(int ix{0}; ix < PROBLEM::Nx; ix++){
 
             if(ix == PROBLEM::Nx-1) {derivFbar = {0,0,0};}
@@ -254,6 +282,8 @@ int main () {
 
     }
 
+}
+
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
 
@@ -262,7 +292,7 @@ int main () {
     std::cout << "time elapsed: " << elapsed.count() << " seconds" << std::endl;
     std::cout << "it/sec: " << stepcount / elapsed.count() << std::endl;
     //writing out the final result to a text file.
-    // writeArrFile(fieldU, "output/final.txt");
+    writeArrFile(fieldU, "output/final_cpu.txt");
     std::cout << "=========== Done! ===========" << '\n';
 
     return 0;
